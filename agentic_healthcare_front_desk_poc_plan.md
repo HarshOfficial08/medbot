@@ -168,7 +168,8 @@ This is the main agentic behavior.
 
 -   Node.js
 -   LiveKit Agents
--   Gemini Live / Gemini realtime model
+-   Gemini Live via **Vertex AI** (not the public Gemini Developer
+    API / AI Studio key) — see §54 for why
 
 ## Backend
 
@@ -178,7 +179,9 @@ This is the main agentic behavior.
 
 ## Database
 
--   MongoDB
+-   MongoDB (Atlas — HIPAA-eligible dedicated tier once real PHI is
+    in scope, see §54; standard/shared tier is fine while data stays
+    synthetic)
 
 ## Initial deployment
 
@@ -1258,8 +1261,13 @@ src/
 
 # 27. LiveKit Agent Structure
 
+**Note (decided during setup — see §55):** the repo uses flat
+top-level `frontend/`, `backend/`, `agent/` folders instead of an
+`apps/*` monorepo, as independent projects with no shared workspace
+for now. The structure below is otherwise unchanged.
+
 ``` text
-apps/agent/
+agent/
 ├── src/
 │   ├── agent.js
 │   ├── instructions.js
@@ -1284,59 +1292,59 @@ apps/agent/
 # 28. Complete Repository Structure
 
 ``` text
-healthcare-agent-poc/
+medbot/
 │
-├── apps/
-│   ├── web/
-│   │   ├── src/
-│   │   │   ├── components/
-│   │   │   │   ├── VoiceAssistant.jsx
-│   │   │   │   ├── Conversation.jsx
-│   │   │   │   ├── PatientForm.jsx
-│   │   │   │   ├── AgentActivity.jsx
-│   │   │   │   ├── AppointmentOptions.jsx
-│   │   │   │   └── DoctorReview.jsx
-│   │   │   │
-│   │   │   ├── hooks/
-│   │   │   ├── services/
-│   │   │   └── App.jsx
-│   │   └── package.json
-│   │
-│   ├── agent/
-│   │   ├── src/
-│   │   │   ├── agent.js
-│   │   │   ├── instructions.js
-│   │   │   ├── tools/
-│   │   │   ├── state/
-│   │   │   └── services/
-│   │   └── package.json
-│   │
-│   └── api/
-│       ├── src/
-│       │   ├── patients/
-│       │   ├── doctors/
-│       │   ├── departments/
-│       │   ├── schedules/
-│       │   ├── appointments/
-│       │   ├── intake/
-│       │   └── audit/
-│       └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── VoiceAssistant.jsx
+│   │   │   ├── Conversation.jsx
+│   │   │   ├── PatientForm.jsx
+│   │   │   ├── AgentActivity.jsx
+│   │   │   ├── AppointmentOptions.jsx
+│   │   │   └── DoctorReview.jsx
+│   │   │
+│   │   ├── hooks/
+│   │   ├── services/
+│   │   └── App.jsx
+│   └── package.json
 │
-├── packages/
-│   ├── types/
-│   └── config/
+├── backend/
+│   ├── src/
+│   │   ├── patients/
+│   │   ├── doctors/
+│   │   ├── departments/
+│   │   ├── schedules/
+│   │   ├── appointments/
+│   │   ├── intake/
+│   │   └── audit/
+│   └── package.json
 │
-├── seed/
+├── agent/                       (not yet scaffolded)
+│   ├── src/
+│   │   ├── agent.js
+│   │   ├── instructions.js
+│   │   ├── tools/
+│   │   ├── state/
+│   │   └── services/
+│   └── package.json
+│
+├── seed/                        (not yet built)
 │   ├── departments.js
 │   ├── doctors.js
 │   ├── schedules.js
 │   ├── patients.js
 │   └── appointments.js
 │
-├── .env.example
-├── package.json
-└── README.md
+├── agentic_healthcare_front_desk_poc_plan.md
+├── CLAUDE.md
+└── .claude/
 ```
+
+No root `package.json`/workspace — `frontend/`, `backend/`, and
+(later) `agent/` are independent projects with their own lockfiles.
+`packages/` (shared types) from the original monorepo idea is deferred
+until there's an actual shared piece to justify it — see §55.
 
 ------------------------------------------------------------------------
 
@@ -1350,8 +1358,11 @@ LIVEKIT_URL=
 LIVEKIT_API_KEY=
 LIVEKIT_API_SECRET=
 
-# Google Gemini
-GOOGLE_API_KEY=
+# Google Gemini — via Vertex AI, not the public Gemini Developer API
+# (see §54). GOOGLE_API_KEY is intentionally not used.
+GOOGLE_CLOUD_PROJECT=
+GOOGLE_CLOUD_LOCATION=us-central1
+GOOGLE_APPLICATION_CREDENTIALS=
 
 # Backend
 API_BASE_URL=http://localhost:3000
@@ -2284,3 +2295,91 @@ The objective is not to demonstrate that an LLM can talk.
 The objective is to demonstrate that an LLM can **operate a healthcare
 front-desk workflow through controlled tools while maintaining state and
 keeping the patient in control of consequential actions**.
+
+------------------------------------------------------------------------
+
+# 54. Compliance & Vendor Decisions (HIPAA Track)
+
+This project is not staying a throwaway POC — it is intended to grow
+into a real product that will eventually handle real patient data.
+That decision changes three vendor choices now, even though the build
+continues to use synthetic data until real PHI is actually in scope.
+
+## Why this matters now, not later
+
+Once real PHI flows through any part of the system, every vendor that
+touches it (model provider, database, realtime transport) needs a
+signed Business Associate Agreement (BAA) under HIPAA. Some of those
+vendors have a "consumer" tier that is explicitly **not** covered by
+their BAA, alongside an enterprise tier that is. If the code is built
+against the consumer tier first, switching later is not just a config
+change — it can mean different SDKs, different auth models, different
+error handling. Building against the BAA-eligible tier from day one
+avoids that rewrite, and costs nothing while data stays synthetic.
+
+## Decisions
+
+**Gemini → Vertex AI, not the public Gemini Developer API / AI
+Studio.** The free `GOOGLE_API_KEY` path is not covered by Google's
+BAA. Vertex AI is. The good news: `@livekit/agents-plugin-google`
+(the same Node.js plugin the plan already uses) supports Vertex AI
+natively — `vertexai: true` plus `project`/`location` — so this is a
+config decision, not a different integration. Use
+`GOOGLE_CLOUD_PROJECT` / `GOOGLE_CLOUD_LOCATION` /
+`GOOGLE_APPLICATION_CREDENTIALS` from the start (§29), never
+`GOOGLE_API_KEY`.
+
+**MongoDB → Atlas, HIPAA-eligible dedicated tier before real PHI.**
+Shared/free tier Atlas is fine for synthetic seed data during
+development. Before any real patient record is written, move to a
+dedicated cluster tier with a signed BAA.
+
+**LiveKit → Cloud Scale tier (or Enterprise) with a signed BAA before
+real PHI.** LiveKit Cloud is HIPAA-eligible on Scale/Enterprise with a
+BAA, requested through their sales contact, and requires picking from
+their HIPAA-eligible model list. The free/Standard tier is fine for
+development with synthetic voices.
+
+## What this does *not* require right now
+
+- No BAA needs to be signed today — only once real patient data is
+  actually going to flow through a given vendor.
+- No infrastructure changes today beyond pointing the Gemini client at
+  Vertex AI instead of AI Studio.
+- Seed data stays synthetic (§8) until this compliance track is
+  actually complete.
+
+## One thing to design in now, not retrofit later
+
+The audit trail (§41) will eventually contain real patient
+information once PHI is in scope. Design its storage and any
+downstream consumers (logs, error trackers, analytics) assuming that
+from the start — e.g. don't pipe raw tool arguments/results into a
+third-party logging or error-tracking service that hasn't itself
+signed a BAA, even during development. It's a much smaller habit to
+build now than a migration to do later.
+
+------------------------------------------------------------------------
+
+# 55. Repo Structure Decision
+
+Decided when actual scaffolding started, superseding §27/§28's
+original `apps/*` monorepo sketch:
+
+- **Flat top-level folders**: `frontend/`, `backend/`, `agent/`
+  (added later) instead of `apps/web`, `apps/api`, `apps/agent`. Same
+  content/conventions as originally planned, different top-level
+  names.
+- **No workspace, independent projects**: no root `package.json` or
+  npm/pnpm `workspaces` field. Each folder is scaffolded by its own
+  framework CLI and keeps its own `package.json`/lockfile. `packages/`
+  (shared types, per the original §28 sketch) is deferred until
+  there's an actual piece of code that needs sharing across
+  frontend/backend/agent — introducing a workspace before that exists
+  would be structure with nothing to justify it.
+- Everything else already decided — CLI-only scaffolding, TypeScript
+  pinned to 6.x, NestJS/React/LiveKit conventions — carries over
+  unchanged; only the folder names and workspace question changed.
+  `CLAUDE.md` is the source of truth for current conventions; this
+  section just records why the structure differs from §27/§28's
+  original diagrams.

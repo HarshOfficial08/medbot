@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Every colour/spacing decision in the app references
+ * these rather than a raw literal, so the a11y + token discipline in
+ * .claude/skills/develop/checklist.md has something to point at.
+ *
+ * Contrast targets (WCAG AA): body text >= 4.5:1 on its background,
+ * control boundaries >= 3:1.
+ */
+@theme {
+  --color-surface: oklch(99% 0.003 250);
+  --color-surface-raised: oklch(100% 0 0);
+  --color-surface-sunken: oklch(96.5% 0.005 250);
+
+  --color-ink: oklch(24% 0.02 260);
+  --color-ink-muted: oklch(48% 0.02 260);
+  --color-ink-subtle: oklch(62% 0.015 260);
+
+  --color-line: oklch(90% 0.008 260);
+  --color-line-strong: oklch(78% 0.012 260);
+
+  --color-accent: oklch(52% 0.16 250);
+  --color-accent-ink: oklch(99% 0.005 250);
+  --color-accent-soft: oklch(95% 0.03 250);
+
+  --color-positive: oklch(52% 0.13 155);
+  --color-caution: oklch(62% 0.14 75);
+  --color-critical: oklch(52% 0.19 25);
+
+  --radius-panel: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-surface: oklch(19% 0.012 260);
+    --color-surface-raised: oklch(23% 0.014 260);
+    --color-surface-sunken: oklch(16% 0.012 260);
+
+    --color-ink: oklch(95% 0.008 260);
+    --color-ink-muted: oklch(76% 0.012 260);
+    --color-ink-subtle: oklch(62% 0.012 260);
+
+    --color-line: oklch(31% 0.014 260);
+    --color-line-strong: oklch(42% 0.016 260);
+
+    --color-accent: oklch(70% 0.14 250);
+    --color-accent-ink: oklch(17% 0.02 260);
+    --color-accent-soft: oklch(28% 0.05 250);
+  }
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    @apply bg-surface text-ink antialiased;
+  }
+
+  /*
+   * Never remove a focus indicator without replacing it — required by
+   * the develop skill's accessibility checklist.
+   */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+}
