@@ -10,6 +10,12 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware.j
 import { DatabaseModule } from './infra/database/database.module.js';
 import { AuditModule } from './infra/audit/audit.module.js';
 import { HealthModule } from './module/health/health.module.js';
+import { DepartmentsModule } from './module/departments/departments.module.js';
+import { DoctorsModule } from './module/doctors/doctors.module.js';
+import { SchedulesModule } from './module/schedules/schedules.module.js';
+import { PatientsModule } from './module/patients/patients.module.js';
+import { AppointmentsModule } from './module/appointments/appointments.module.js';
+import { IntakeModule } from './module/intake/intake.module.js';
 
 @Module({
   imports: [
@@ -37,6 +43,12 @@ import { HealthModule } from './module/health/health.module.js';
     DatabaseModule,
     AuditModule,
     HealthModule,
+    DepartmentsModule,
+    DoctorsModule,
+    SchedulesModule,
+    PatientsModule,
+    AppointmentsModule,
+    IntakeModule,
   ],
   controllers: [AppController],
   providers: [
